@@ -162,12 +162,12 @@ def handler(event, context):
     if 'SA_TEAM_TOKEN' in os.environ and 'DB_ACCESS_TOKEN' in os.environ:
         SA_TOKEN = os.environ['SA_TEAM_TOKEN']
         DB_TOKEN = os.environ['DB_ACCESS_TOKEN']
-        sa = SAClient(SA_TOKEN)
         print(SA_TOKEN, DB_TOKEN)
     else:
         sa_print("Missing environment variables", is_error=True)
         raise Exception("Missing environment variables")
 
+    sa = SAClient(SA_TOKEN)
     sa_print("Starting the action")
     sa_data = validate_context(context)
     if not sa_data:
