@@ -101,6 +101,7 @@ def db_connect(server_hostname, http_path, access_token, staging_allowed_local_p
                         http_path = http_path,
                         access_token = access_token,
                         staging_allowed_local_path=staging_allowed_local_path,
+                        _user_agent_entry="SuperAnnotateIntegration"
     )
     return {
         'connection': connection,
@@ -156,7 +157,7 @@ def sa_print(text, is_error=False):
     if is_error:
         print(f">>> SA ERROR: {text} !!! >>> >>> >>> >>>")
     else:
-        print(f">>> SA: {text} >>> >>> >>> >>>")
+        print(f">>> SA: {text}")
 
 def handler(event, context):
     if 'SA_TEAM_TOKEN' in os.environ and 'DB_ACCESS_TOKEN' in os.environ:
@@ -195,15 +196,28 @@ def handler(event, context):
     sa_print("Connecting to Databricks SQL connector")
     staging_allowed_local_path = TEMP_DIR
     db_connection = db_connect(db_server_hostname, db_http_path, DB_TOKEN, staging_allowed_local_path)
-    sa_print("Upliadng CSV file to Databricks volume")
+    sa_print("Uploadng CSV file to Databricks volume")
     db_upload_to_volume(csv_full_file_name, csv_file_name, db_catalog, db_schema, db_volume, db_connection)
+    output_message = "Action completed successfully.\n"
     if create_delta_table:
         sa_print("Creating a new table in Databricks")
         db_create_table(db_catalog, db_schema, table_name, db_connection)
-        sa_print("Addind data to the table from volume in Databricks")
+        sa_print("Adding data to the table from volume in Databricks")
         db_volume_to_table(csv_file_name, table_name, db_catalog, db_schema, db_volume, db_connection)
         sa_print("Deleting CSV file from Databricks volume")
         db_delete_from_volume(csv_file_name, db_catalog, db_schema, db_volume, db_connection)
+        output_message += f"""Databricks table is created:
+        \tCatalog: {db_catalog},
+        \tSchema: {db_schema},
+        \tTable: {table_name}
+        """
+    else:
+        output_message += f"""CSV file is uploaded to Databricks volume:
+        \tCatalog: {db_catalog},
+        \tSchema: {db_schema},
+        \tVolume: {db_volume},
+        \tFull ptah: /Volumes/{db_catalog}/{db_schema}/{db_volume}/superannotate/{csv_file_name}
+        """
     db_disconnect(db_connection)
-    sa_print("Action completed successfully")
-    return
+    sa_print(output_message)
+    return output_message
